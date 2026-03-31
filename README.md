@@ -1,284 +1,220 @@
-# Advanced Python Calculator (Midterm Project)
+# FastAPI Calculator — Midterm Project
 
-## Project Overview
-
-This project implements an advanced command-line calculator built in Python. The application supports multiple mathematical operations, maintains calculation history, and demonstrates professional software engineering practices including configuration management, logging, serialization with pandas, automated testing, and continuous integration.
-
-The calculator allows users to perform operations interactively through a REPL (Read-Evaluate-Print Loop) interface and persist calculation history between sessions using CSV files.
+A full-stack calculator application built with **FastAPI** and tested with unit, integration, and end-to-end (Playwright) tests. Includes structured logging and a GitHub Actions CI pipeline.
 
 ---
 
-# Features
+## Features
 
-- Command Line REPL Calculator
-- Multiple mathematical operations
-- Persistent calculation history
-- Undo and redo functionality
-- Configurable environment settings
-- Automatic logging
-- Serialization and deserialization using pandas
-- Robust error handling
-- Comprehensive unit testing with pytest
-- Code coverage enforcement (≥90%)
-- Continuous Integration using GitHub Actions
-- Advanced Design Patterns (Command, Decorator, Observer, Memento, Facade, Factory)
-- Color-coded terminal outputs for improved UX
-- Dynamic auto-generated help menu
+- **Web UI** — browser-based calculator with live results and history table
+- **REST API** — JSON endpoints for all arithmetic operations
+- **10 operations** — addition, subtraction, multiplication, division, power, root, modulus, integer division, percent, absolute difference
+- **Logging** — all requests and errors logged to `data/logs/fastapi_calculator.log`
+- **81 tests** — unit, integration, and end-to-end
+- **GitHub Actions CI** — runs all tests automatically on every push
 
 ---
 
-# Supported Operations
-
-The calculator supports the following operations:
-
-| Operation | Command Aliases | Example |
-|-----------|----------------|---------|
-| Addition | `add`, `+` | `add 2 3` |
-| Subtraction | `sub`, `subtract`, `-` | `sub 10 4` |
-| Multiplication | `mul`, `multiply`, `*` | `mul 3 5` |
-| Division | `div`, `divide`, `/` | `div 10 2` |
-| Power | `pow`, `power`, `**` | `pow 2 3` |
-| Root | `root` | `root 16 2` |
-| Modulus | `mod`, `modulus`, `%` | `mod 10 3` |
-| Integer Division | `int_divide`, `//` | `int_divide 7 2` |
-| Percentage | `percent`, `pct` | `percent 1 4` |
-| Absolute Difference | `abs_diff`, `absdiff` | `abs_diff 10 14` |
-
----
-
-# Project Structure
-```text
-app/
-calculation.py
-calculator_config.py
-calculator_memento.py
-calculator_repl.py
-colors.py
-commands.py
-exceptions.py
-history.py
-input_validators.py
-logger.py
-observers.py
-operations.py
-tests/
-
+## Project Structure
 
 ```
-
-Unit tests using pytest
-
-.github/workflows/
-GitHub Actions CI workflow
-
+Midterm_Project-main/
+├── fastapi_app.py              # FastAPI application (routes + logging)
+├── templates/
+│   └── index.html              # Web UI (HTML + JavaScript)
+├── app/
+│   ├── operations.py           # All math operation classes + factory
+│   ├── calculation.py          # Calculator facade
+│   ├── calculator_repl.py      # Original CLI REPL interface
+│   ├── exceptions.py           # Custom exception classes
+│   └── ...                     # Config, history, commands, observers
+├── tests/
+│   ├── test_unit_operations.py     # Unit tests for operations.py
+│   ├── test_integration_api.py     # Integration tests for API endpoints
+│   ├── test_e2e_playwright.py      # End-to-end browser tests
+│   └── ...                         # Original CLI test suite
+├── conftest.py                 # Shared pytest fixtures (live server)
+├── .github/workflows/ci.yml    # GitHub Actions CI workflow
+├── requirements.txt
+└── pytest.ini
+```
 
 ---
 
-# Installation
+## Supported Operations
+
+| Operation | API name | Example |
+|---|---|---|
+| Addition | `add` | `5 + 3 = 8` |
+| Subtraction | `sub` | `10 − 4 = 6` |
+| Multiplication | `mul` | `6 × 7 = 42` |
+| Division | `div` | `20 ÷ 4 = 5` |
+| Power | `pow` | `2 ^ 10 = 1024` |
+| Root | `root` | `∛27 = 3` |
+| Modulus | `mod` | `10 % 3 = 1` |
+| Integer Division | `int_divide` | `10 // 3 = 3` |
+| Percentage | `percent` | `(50/200)×100 = 25%` |
+| Absolute Difference | `abs_diff` | `\|3 − 10\| = 7` |
+
+---
+
+## Installation
 
 ### 1. Clone the repository
 
-
+```bash
 git clone <your-repository-url>
-cd Midterm_Project
+cd Midterm_Project-main
+```
 
+### 2. Create and activate a virtual environment
 
-### 2. Create virtual environment
-
-
+```bash
 python -m venv .venv
 
-
-Activate the environment:
-
-Windows
-
-
+# Windows
 .venv\Scripts\activate
 
-
-Mac/Linux
-
-
+# Mac/Linux
 source .venv/bin/activate
-
+```
 
 ### 3. Install dependencies
 
-
+```bash
 pip install -r requirements.txt
+```
 
+### 4. Install Playwright browser
 
----
-
-# Environment Configuration
-
-The application supports configuration using environment variables or a `.env` file.
-
-Example `.env` file:
-
-
-CALCULATOR_LOG_DIR=data/logs
-CALCULATOR_HISTORY_DIR=data/history
-CALCULATOR_HISTORY_FILE=data/history/history.csv
-CALCULATOR_AUTO_SAVE=true
-CALCULATOR_PRECISION=4
-CALCULATOR_MAX_HISTORY_SIZE=100
-CALCULATOR_MAX_INPUT_VALUE=1000000
-CALCULATOR_DEFAULT_ENCODING=utf-8
-
+```bash
+playwright install chromium
+```
 
 ---
 
-# Running the Calculator
+## Running the Web Application
 
-Start the REPL interface:
+```bash
+uvicorn fastapi_app:app --reload
+```
 
-
-python -m app.calculator_repl
-
-
-Example session:
-
-
-add 2 3
-Result: 5
-
-mul 4 6
-Result: 24
-
-history
-timestamp operation a b result
-
-undo
-redo
-save
-exit
-
+Open `http://127.0.0.1:8000` in your browser.
 
 ---
 
-# Calculation History Persistence
+## API Endpoints
 
-Calculation history is stored using **pandas** and serialized to a CSV file.
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/` | Calculator web UI |
+| `POST` | `/calculate` | Perform a calculation (form data: `operation`, `a`, `b`) |
+| `GET` | `/history` | Retrieve calculation history (JSON) |
+| `DELETE` | `/history` | Clear calculation history |
+| `GET` | `/operations` | List all supported operation names |
+| `GET` | `/health` | Health check |
 
-Saved columns include:
+### Example — POST /calculate
 
-- timestamp
-- operation
-- operand a
-- operand b
-- result
+```bash
+curl -X POST http://127.0.0.1:8000/calculate \
+  -d "operation=add&a=5&b=3"
+```
 
-History can be saved and loaded using commands:
-
-
-save
-load
-
-
-The CSV file location is configured using:
-
-
-CALCULATOR_HISTORY_FILE
-
+```json
+{"result": 8.0, "operation": "add", "a": 5.0, "b": 3.0}
+```
 
 ---
 
-# Logging
+## Running Tests
 
-The calculator uses Python's logging system to track operations and errors.
+### Unit + Integration tests
 
-Logs are written to the directory specified by:
+```bash
+python -m pytest tests/test_unit_operations.py tests/test_integration_api.py -v
+```
 
+### End-to-End tests (requires the browser)
 
-CALCULATOR_LOG_DIR
+```bash
+python -m pytest tests/test_e2e_playwright.py -v --browser chromium
+```
 
+### All new tests together
 
-Default location:
+```bash
+python -m pytest tests/test_unit_operations.py tests/test_integration_api.py tests/test_e2e_playwright.py -v --browser chromium
+```
 
+### Run with coverage
 
-data/logs/calculator.log
-
-
----
-
-# Running Tests
-
-The project includes extensive unit tests using **pytest**.
-
-Run tests:
-
-
-pytest
-
-
----
-
-# Code Coverage
-
-To run tests with coverage:
-
-
+```bash
 pytest --cov=app --cov-report=term-missing
-
-
-The project enforces **minimum 90% coverage**.
+```
 
 ---
 
-# Continuous Integration (CI)
+## Test Summary
 
-The project uses **GitHub Actions** to automatically run tests and enforce coverage requirements.
+| Test file | Type | Tests |
+|---|---|---|
+| `test_unit_operations.py` | Unit | 43 |
+| `test_integration_api.py` | Integration | 25 |
+| `test_e2e_playwright.py` | End-to-End | 13 |
+| **Total** | | **81** |
 
-The CI pipeline performs the following steps:
+---
 
+## Logging
+
+All operations and errors are logged to:
+
+```
+data/logs/fastapi_calculator.log
+```
+
+Log format:
+```
+2025-01-01 12:00:00 | INFO | Calculation request: 5.0 add 3.0
+2025-01-01 12:00:00 | INFO | Result: 5.0 add 3.0 = 8.0
+```
+
+---
+
+## Continuous Integration
+
+GitHub Actions runs all three test suites automatically on every push or pull request to `main`/`master`.
+
+Workflow file: `.github/workflows/ci.yml`
+
+Steps:
 1. Checkout repository
-2. Setup Python environment
+2. Set up Python 3.11
 3. Install dependencies
-4. Run pytest with coverage
-5. Fail build if coverage drops below 90%
-
-Workflow file:
-
-
-.github/workflows/python-app.yml
-
+4. Install Playwright Chromium browser
+5. Run unit tests
+6. Run integration tests
+7. Run end-to-end tests
 
 ---
 
-# Error Handling
+## Design Patterns (CLI Calculator)
 
-Custom exceptions are used throughout the application:
+The underlying calculator library (`app/`) demonstrates several design patterns:
 
-- `OperationError`
-- `InvalidInputError`
-- `ValidationError`
-- `PersistenceError`
-- `ConfigError`
-
-This ensures clear and consistent error reporting.
-
----
-
-# Development Practices
-
-This project demonstrates several software engineering best practices:
-
-- Modular architecture
-- Clean separation of concerns
-- Unit testing
-- Configuration management
-- Logging
-- Serialization and persistence
-- Continuous integration
-- Code coverage enforcement
-- Design Patterns Application (Command, Decorator, Observer, Memento, Facade, Factory)
+| Pattern | Where used |
+|---|---|
+| **Factory** | `OperationFactory` — creates operation instances by name |
+| **Facade** | `CalculatorFacade` — unified interface over history, memento, observers |
+| **Command** | `commands.py` — each REPL action is an encapsulated command object |
+| **Observer** | `observers.py` — logging and auto-save observers |
+| **Memento** | `calculator_memento.py` — undo/redo state management |
+| **Decorator** | `@OperationFactory.register(...)` — registers operations at class definition |
 
 ---
 
-# Author
+## Author
 
-Isha Jagtap \
-Master's in Computer Science  
-NJIT
+Isha Jagtap  
+Master's in Computer Science — NJIT
