@@ -48,7 +48,7 @@ jobs:
 
       - name: Run unit tests (no DB required)
         run: |
-          python -m pytest tests/test_unit_operations.py tests/test_user_unit.py -v
+          python -m pytest tests/test_unit_operations.py tests/test_user_unit.py tests/test_calculation_unit.py -v
 
       - name: Run integration tests (calculator API)
         run: |
@@ -57,6 +57,10 @@ jobs:
       - name: Run user integration tests (requires Postgres)
         run: |
           python -m pytest tests/test_user_integration.py -v
+
+      - name: Run calculation integration tests (requires Postgres)
+        run: |
+          python -m pytest tests/test_calculation_integration.py -v
 
       - name: Run end-to-end tests
         run: |

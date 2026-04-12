@@ -1,6 +1,6 @@
 # FastAPI Calculator — Midterm Project
 
-A full-stack calculator application built with **FastAPI**, featuring a **secure user model** backed by PostgreSQL (SQLAlchemy + bcrypt hashing), Pydantic schema validation, and a full CI/CD pipeline via GitHub Actions and Docker Hub.
+A full-stack calculator application built with **FastAPI**, featuring a **secure user model**, a **Calculation model** with factory pattern, PostgreSQL (SQLAlchemy + bcrypt hashing), Pydantic schema validation, and a full CI/CD pipeline via GitHub Actions and Docker Hub.
 
 ---
 
@@ -9,7 +9,9 @@ A full-stack calculator application built with **FastAPI**, featuring a **secure
 - **Web UI** — browser-based calculator with live results and history table
 - **REST API** — JSON endpoints for all arithmetic operations
 - **Secure User Model** — SQLAlchemy ORM model with bcrypt-hashed passwords, unique constraints on `username` and `email`
-- **Pydantic Schemas** — `UserCreate` (validates input) and `UserRead` (never exposes `password_hash`)
+- **Calculation Model** — SQLAlchemy ORM model storing `a`, `b`, `type`, and `result` with optional `user_id` foreign key
+- **Pydantic Schemas** — `UserCreate`, `UserRead`, `CalculationCreate` (with divide-by-zero validation), `CalculationRead`
+- **Factory Pattern** — `CalculationFactory` selects and executes the correct arithmetic operation (Add, Sub, Multiply, Divide)
 - **10 operations** — addition, subtraction, multiplication, division, power, root, modulus, integer division, percent, absolute difference
 - **Logging** — all requests and errors logged to `data/logs/fastapi_calculator.log`
 - **Tests** — unit tests (no DB), integration tests (Postgres), and end-to-end tests (Playwright)
@@ -22,29 +24,66 @@ A full-stack calculator application built with **FastAPI**, featuring a **secure
 
 ```
 Midterm_Project-main/
-├── fastapi_app.py              # FastAPI application (routes + logging)
+├── fastapi_app.py                      # FastAPI application (routes + logging)
 ├── app/
-│   ├── database.py             # SQLAlchemy engine, session, Base
-│   ├── models.py               # User ORM model (username, email, password_hash, created_at)
-│   ├── schemas.py              # Pydantic: UserCreate, UserRead
-│   ├── security.py             # hash_password() and verify_password() (bcrypt)
-│   ├── operations.py           # Math operation classes + factory
-│   ├── calculation.py          # Calculator facade
-│   └── ...                     # Config, history, commands, observers, exceptions
+│   ├── database.py                     # SQLAlchemy engine, session, Base
+│   ├── models.py                       # User + Calculation ORM models
+│   ├── schemas.py                      # Pydantic: UserCreate, UserRead, CalculationCreate, CalculationRead
+│   ├── calculation_factory.py          # CalculationFactory — factory pattern for arithmetic operations
+│   ├── security.py                     # hash_password() and verify_password() (bcrypt)
+│   ├── operations.py                   # Math operation classes + OperationFactory
+│   ├── calculation.py                  # Calculator facade
+│   └── ...                             # Config, history, commands, observers, exceptions
 ├── tests/
-│   ├── test_user_unit.py           # Unit tests: hashing, schema validation (no DB)
-│   ├── test_user_integration.py    # Integration tests: DB model + /users API (Postgres)
-│   ├── test_unit_operations.py     # Unit tests for math operations
-│   ├── test_integration_api.py     # Integration tests for calculator API
-│   ├── test_e2e_playwright.py      # End-to-end browser tests
-│   └── ...                         # Additional CLI test suite
+│   ├── test_calculation_unit.py        # Unit tests: CalculationCreate schema, CalculationFactory (no DB)
+│   ├── test_calculation_integration.py # Integration tests: Calculation DB model + error cases (Postgres)
+│   ├── test_user_unit.py               # Unit tests: hashing, UserCreate/UserRead schema (no DB)
+│   ├── test_user_integration.py        # Integration tests: User DB model + /users API (Postgres)
+│   ├── test_unit_operations.py         # Unit tests for math operations
+│   ├── test_integration_api.py         # Integration tests for calculator API
+│   ├── test_e2e_playwright.py          # End-to-end browser tests
+│   └── ...                             # Additional CLI test suite
 ├── templates/
-│   └── index.html              # Web UI
-├── .github/workflows/ci.yml    # GitHub Actions CI + Docker Hub push
-├── docker-compose.yml          # Local Postgres + pgAdmin + app
+│   └── index.html                      # Web UI
+├── .github/workflows/ci.yml            # GitHub Actions CI + Docker Hub push
+├── docker-compose.yml                  # Local Postgres + pgAdmin + app
 ├── Dockerfile
 ├── requirements.txt
 └── pytest.ini
+```
+
+---
+
+## Calculation Model
+
+### SQLAlchemy Model (`app/models.py`)
+
+| Column       | Type        | Constraints                        |
+|--------------|-------------|------------------------------------|
+| `id`         | Integer     | Primary key, auto-increment        |
+| `user_id`    | Integer     | Foreign key → `users.id`, nullable |
+| `a`          | Float       | Not null — left operand            |
+| `b`          | Float       | Not null — right operand           |
+| `type`       | String(20)  | Not null — `add`, `sub`, `multiply`, `divide` |
+| `result`     | Float       | Not null — computed and stored     |
+| `created_at` | DateTime    | Default: `utcnow`                  |
+
+### Pydantic Schemas (`app/schemas.py`)
+
+- **`CalculationCreate`** — accepts `a`, `b`, `type` (must be one of `add`, `sub`, `multiply`, `divide`), optional `user_id`. Raises a validation error if `type` is `divide` and `b` is `0`.
+- **`CalculationRead`** — returns `id`, `a`, `b`, `type`, `result`, `user_id`, `created_at`.
+
+### CalculationFactory (`app/calculation_factory.py`)
+
+A factory class that maps a `CalculationType` enum to the correct arithmetic logic:
+
+```python
+from app.calculation_factory import CalculationFactory
+from app.schemas import CalculationType
+
+result = CalculationFactory.compute(CalculationType.add, 3, 4)      # 7
+result = CalculationFactory.compute(CalculationType.multiply, 6, 7) # 42
+result = CalculationFactory.compute(CalculationType.divide, 10, 2)  # 5.0
 ```
 
 ---
@@ -144,7 +183,10 @@ pgAdmin is available at `http://localhost:5050` (admin@admin.com / admin).
 ### Without Docker (requires local Postgres)
 
 ```bash
-# Set the database URL
+# Windows CMD
+set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fastapi_db
+
+# Mac/Linux
 export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fastapi_db
 
 uvicorn fastapi_app:app --reload
@@ -154,10 +196,16 @@ uvicorn fastapi_app:app --reload
 
 ## Running Tests Locally
 
-### Unit tests (no database required)
+### Start the database first (for integration tests)
 
 ```bash
-pytest tests/test_unit_operations.py tests/test_user_unit.py -v
+docker-compose up db -d
+```
+
+### Unit tests — no database required
+
+```bash
+pytest tests/test_unit_operations.py tests/test_user_unit.py tests/test_calculation_unit.py -v
 ```
 
 ### Integration tests — calculator API (no database required)
@@ -168,11 +216,26 @@ pytest tests/test_integration_api.py -v
 
 ### Integration tests — user model (requires Postgres)
 
-Start Postgres first (e.g. `docker-compose up db -d`), then:
-
 ```bash
+# Windows CMD
+set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fastapi_db
+pytest tests/test_user_integration.py -v
+
+# Mac/Linux
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fastapi_db \
   pytest tests/test_user_integration.py -v
+```
+
+### Integration tests — calculation model (requires Postgres)
+
+```bash
+# Windows CMD
+set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fastapi_db
+pytest tests/test_calculation_integration.py -v
+
+# Mac/Linux
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fastapi_db \
+  pytest tests/test_calculation_integration.py -v
 ```
 
 ### End-to-end tests (requires Playwright browser)
@@ -184,6 +247,11 @@ pytest tests/test_e2e_playwright.py -v --browser chromium
 ### All tests with coverage
 
 ```bash
+# Windows CMD
+set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fastapi_db
+pytest tests/ -v --browser chromium --cov=app --cov-report=term-missing
+
+# Mac/Linux
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fastapi_db \
   pytest tests/ -v --browser chromium --cov=app --cov-report=term-missing
 ```
@@ -197,11 +265,12 @@ The GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push/PR t
 1. **Spin up a Postgres 15 service container** — available at `localhost:5432`
 2. **Install Python 3.11 and all dependencies**
 3. **Install Playwright Chromium**
-4. **Run unit tests** (`test_unit_operations.py`, `test_user_unit.py`)
+4. **Run unit tests** (`test_unit_operations.py`, `test_user_unit.py`, `test_calculation_unit.py`)
 5. **Run calculator integration tests** (`test_integration_api.py`)
 6. **Run user integration tests** (`test_user_integration.py`) — uses the Postgres container
-7. **Run end-to-end tests** (`test_e2e_playwright.py`)
-8. **Build and push Docker image to Docker Hub** — only on push to `main`/`master`, only after all tests pass
+7. **Run calculation integration tests** (`test_calculation_integration.py`) — uses the Postgres container
+8. **Run end-to-end tests** (`test_e2e_playwright.py`)
+9. **Build and push Docker image to Docker Hub** — only on push to `main`/`master`, only after all tests pass
 
 ### Setting up Docker Hub secrets
 
@@ -264,13 +333,14 @@ docker run -p 8000:8000 \
 
 ## Design Patterns
 
-| Pattern     | Where used                                                        |
-|-------------|-------------------------------------------------------------------|
-| **Factory** | `OperationFactory` — creates operation instances by name          |
-| **Facade**  | `CalculatorFacade` — unified interface over history, memento, observers |
-| **Command** | `commands.py` — each REPL action is an encapsulated command object |
-| **Observer**| `observers.py` — logging and auto-save observers                  |
-| **Memento** | `calculator_memento.py` — undo/redo state management              |
+| Pattern     | Where used                                                                        |
+|-------------|-----------------------------------------------------------------------------------|
+| **Factory** | `CalculationFactory` — maps `CalculationType` enum to arithmetic logic            |
+| **Factory** | `OperationFactory` — creates REPL/API operation instances by name                 |
+| **Facade**  | `CalculatorFacade` — unified interface over history, memento, observers           |
+| **Command** | `commands.py` — each REPL action is an encapsulated command object                |
+| **Observer**| `observers.py` — logging and auto-save observers                                  |
+| **Memento** | `calculator_memento.py` — undo/redo state management                              |
 
 ---
 

@@ -1,6 +1,8 @@
 """Pydantic schemas for request validation and response serialization."""
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, field_validator
+from enum import Enum
+from typing import Optional
+from pydantic import BaseModel, EmailStr, field_validator, model_validator
 
 
 class UserCreate(BaseModel):
@@ -32,6 +34,45 @@ class UserRead(BaseModel):
     id: int
     username: str
     email: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ── Calculation Schemas ────────────────────────────────────────────────────────
+
+class CalculationType(str, Enum):
+    """Supported arithmetic operation types."""
+    add = "add"
+    sub = "sub"
+    multiply = "multiply"
+    divide = "divide"
+
+
+class CalculationCreate(BaseModel):
+    """Schema for creating a new calculation — validated before persisting."""
+
+    a: float
+    b: float
+    type: CalculationType
+    user_id: Optional[int] = None
+
+    @model_validator(mode="after")
+    def no_divide_by_zero(self) -> "CalculationCreate":
+        if self.type == CalculationType.divide and self.b == 0:
+            raise ValueError("b must not be zero when type is 'divide'")
+        return self
+
+
+class CalculationRead(BaseModel):
+    """Schema for returning a stored calculation — includes computed result."""
+
+    id: int
+    a: float
+    b: float
+    type: str
+    result: float
+    user_id: Optional[int]
     created_at: datetime
 
     model_config = {"from_attributes": True}
