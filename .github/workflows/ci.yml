@@ -10,6 +10,25 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    # ── Postgres service container ───────────────────────────────────────────
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fastapi_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fastapi_db
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -27,14 +46,43 @@ jobs:
       - name: Install Playwright browsers
         run: playwright install chromium --with-deps
 
-      - name: Run unit tests
+      - name: Run unit tests (no DB required)
         run: |
-          python -m pytest tests/test_unit_operations.py -v
+          python -m pytest tests/test_unit_operations.py tests/test_user_unit.py -v
 
-      - name: Run integration tests
+      - name: Run integration tests (calculator API)
         run: |
           python -m pytest tests/test_integration_api.py -v
+
+      - name: Run user integration tests (requires Postgres)
+        run: |
+          python -m pytest tests/test_user_integration.py -v
 
       - name: Run end-to-end tests
         run: |
           python -m pytest tests/test_e2e_playwright.py -v --browser chromium
+
+  # ── Docker Hub push (only on push to main/master, after tests pass) ────────
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-calculator:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-calculator:${{ github.sha }}

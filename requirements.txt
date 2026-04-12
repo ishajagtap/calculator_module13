@@ -16,3 +16,13 @@ httpx>=0.24.0
 # End-to-end tests
 playwright>=1.40.0
 pytest-playwright>=0.4.0
+
+# Database
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+
+# Password hashing
+bcrypt>=4.0.0
+
+# Email validation (used by Pydantic EmailStr)
+email-validator>=2.0.0
