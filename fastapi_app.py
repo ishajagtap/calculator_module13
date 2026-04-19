@@ -11,9 +11,16 @@ from sqlalchemy.exc import IntegrityError
 from app.operations import OperationFactory
 from app.exceptions import DivisionByZeroError, OperationError
 from app.database import engine, get_db
-from app.models import User, Base
-from app.schemas import UserCreate, UserRead
-from app.security import hash_password
+from app.models import User, Calculation, Base
+from app.schemas import (
+    UserCreate,
+    UserRead,
+    UserLogin,
+    CalculationCreate,
+    CalculationRead,
+    CalculationUpdate,
+)
+from app.security import hash_password, verify_password
 
 # ── Logging Setup ──────────────────────────────────────────────────────────────
 log_dir = Path("data/logs")
@@ -99,8 +106,8 @@ async def health_check():
 
 # ── User Routes ────────────────────────────────────────────────────────────────
 
-@app.post("/users", response_model=UserRead, status_code=201)
-def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
+@app.post("/users/register", response_model=UserRead, status_code=201)
+def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     """Register a new user with a hashed password."""
     db_user = User(
         username=user_in.username,
@@ -114,8 +121,20 @@ def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail="Username or email already registered")
-    logger.info("New user created: %s", db_user.username)
+    logger.info("New user registered: %s", db_user.username)
     return db_user
+
+
+@app.post("/users/login")
+def login(user_in: UserLogin, db: Session = Depends(get_db)):
+    """Verify user credentials."""
+    user = db.query(User).filter(User.username == user_in.username).first()
+    if not user or not verify_password(user_in.password, user.password_hash):
+        logger.warning("Failed login attempt for user: %s", user_in.username)
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    logger.info("User logged in: %s", user.username)
+    return {"message": "Login successful", "user_id": user.id, "username": user.username}
 
 
 @app.get("/users/{user_id}", response_model=UserRead)
@@ -132,3 +151,86 @@ async def list_operations():
     """List all supported operation names."""
     ops = sorted(OperationFactory._operations.keys())
     return {"operations": ops}
+
+
+# ── Calculation CRUD (BREAD) ──────────────────────────────────────────────────
+
+@app.post("/calculations", response_model=CalculationRead, status_code=201)
+def add_calculation(calc_in: CalculationCreate, db: Session = Depends(get_db)):
+    """Add a new calculation (Create)."""
+    try:
+        # Use CalculationFactory to ensure consistent results
+        op = OperationFactory.create(calc_in.type.value)
+        result = op.execute(calc_in.a, calc_in.b)
+        
+        db_calc = Calculation(
+            a=calc_in.a,
+            b=calc_in.b,
+            type=calc_in.type.value,
+            result=result,
+            user_id=calc_in.user_id
+        )
+        db.add(db_calc)
+        db.commit()
+        db.refresh(db_calc)
+        logger.info("Calculation added: %s", db_calc.id)
+        return db_calc
+    except (DivisionByZeroError, OperationError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/calculations", response_model=list[CalculationRead])
+def browse_calculations(db: Session = Depends(get_db)):
+    """List all calculations (Browse)."""
+    return db.query(Calculation).all()
+
+
+@app.get("/calculations/{calc_id}", response_model=CalculationRead)
+def read_calculation(calc_id: int, db: Session = Depends(get_db)):
+    """Retrieve a single calculation (Read)."""
+    db_calc = db.query(Calculation).filter(Calculation.id == calc_id).first()
+    if not db_calc:
+        raise HTTPException(status_code=404, detail="Calculation not found")
+    return db_calc
+
+
+@app.put("/calculations/{calc_id}", response_model=CalculationRead)
+def edit_calculation(calc_id: int, calc_update: CalculationUpdate, db: Session = Depends(get_db)):
+    """Update an existing calculation (Edit)."""
+    db_calc = db.query(Calculation).filter(Calculation.id == calc_id).first()
+    if not db_calc:
+        raise HTTPException(status_code=404, detail="Calculation not found")
+    
+    # Update fields if provided
+    if calc_update.a is not None:
+        db_calc.a = calc_update.a
+    if calc_update.b is not None:
+        db_calc.b = calc_update.b
+    if calc_update.type is not None:
+        db_calc.type = calc_update.type.value
+    if calc_update.user_id is not None:
+        db_calc.user_id = calc_update.user_id
+        
+    # Re-calculate result
+    try:
+        op = OperationFactory.create(db_calc.type)
+        db_calc.result = op.execute(db_calc.a, db_calc.b)
+        db.commit()
+        db.refresh(db_calc)
+        logger.info("Calculation updated: %s", db_calc.id)
+        return db_calc
+    except (DivisionByZeroError, OperationError) as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.delete("/calculations/{calc_id}", status_code=204)
+def delete_calculation(calc_id: int, db: Session = Depends(get_db)):
+    """Delete a calculation (Delete)."""
+    db_calc = db.query(Calculation).filter(Calculation.id == calc_id).first()
+    if not db_calc:
+        raise HTTPException(status_code=404, detail="Calculation not found")
+    db.delete(db_calc)
+    db.commit()
+    logger.info("Calculation deleted: %s", calc_id)
+    return None

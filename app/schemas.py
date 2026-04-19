@@ -76,3 +76,17 @@ class CalculationRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class UserLogin(BaseModel):
+    """Schema for user login credentials."""
+    username: str
+    password: str
+
+
+class CalculationUpdate(BaseModel):
+    """Schema for updating an existing calculation — all fields are optional."""
+    a: Optional[float] = None
+    b: Optional[float] = None
+    type: Optional[CalculationType] = None
+    user_id: Optional[int] = None

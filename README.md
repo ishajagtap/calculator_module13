@@ -119,8 +119,9 @@ verify_password("wrong_password", hashed) # False
 
 | Method | Endpoint         | Description                         |
 |--------|------------------|-------------------------------------|
-| `POST` | `/users`         | Register a new user (returns 201)   |
-| `GET`  | `/users/{id}`    | Retrieve a user by ID               |
+| `POST` | `/users/register` | Register a new user (returns 201)   |
+| `POST` | `/users/login`    | Login and get user info             |
+| `GET`  | `/users/{id}`     | Retrieve a user by ID               |
 
 Example — create a user:
 ```bash
@@ -137,6 +138,12 @@ curl -X POST http://127.0.0.1:8000/users \
 ## Installation
 
 ### 1. Clone the repository
+### 1. Clone the repository
+
+```bash
+git clone <your-repository-url>
+cd Midterm_Project-main
+```
 
 ```bash
 git clone <your-repository-url>
@@ -226,16 +233,16 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fastapi_db \
   pytest tests/test_user_integration.py -v
 ```
 
-### Integration tests — calculation model (requires Postgres)
+### Integration tests — calculation models (requires Postgres)
 
 ```bash
 # Windows CMD
 set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fastapi_db
-pytest tests/test_calculation_integration.py -v
+pytest tests/test_calculation_integration.py tests/test_calculation_api_integration.py -v
 
 # Mac/Linux
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fastapi_db \
-  pytest tests/test_calculation_integration.py -v
+  pytest tests/test_calculation_integration.py tests/test_calculation_api_integration.py -v
 ```
 
 ### End-to-end tests (requires Playwright browser)
@@ -326,8 +333,14 @@ docker run -p 8000:8000 \
 | `DELETE` | `/history`     | Clear calculation history               |
 | `GET`    | `/operations`  | List all supported operation names      |
 | `GET`    | `/health`      | Health check                            |
-| `POST`   | `/users`       | Register a new user                     |
-| `GET`    | `/users/{id}`  | Retrieve a user by ID                   |
+| `GET`    | `/calculations`  | List all calculations (Browse)         |
+| `GET`    | `/calculations/{id}` | Get calculation details (Read)     |
+| `POST`   | `/calculations`  | Create new calculation (Add)           |
+| `PUT`    | `/calculations/{id}` | Update calculation (Edit)          |
+| `DELETE` | `/calculations/{id}` | Remove calculation (Delete)        |
+| `POST`   | `/users/register` | Register a new user                   |
+| `POST`   | `/users/login`    | Login user                            |
+| `GET`    | `/users/{id}`     | Retrieve a user by ID                 |
 
 ---
 

@@ -132,7 +132,7 @@ class TestUserModel:
 
 class TestUserAPI:
     def test_create_user_returns_201(self, client):
-        resp = client.post("/users", json={
+        resp = client.post("/users/register", json={
             "username": "grace",
             "email": "grace@example.com",
             "password": "secret123",
@@ -145,7 +145,7 @@ class TestUserAPI:
         assert "created_at" in data
 
     def test_create_user_does_not_return_password(self, client):
-        resp = client.post("/users", json={
+        resp = client.post("/users/register", json={
             "username": "henry",
             "email": "henry@example.com",
             "password": "secret123",
@@ -156,18 +156,18 @@ class TestUserAPI:
 
     def test_duplicate_username_returns_400(self, client):
         payload = {"username": "irene", "email": "irene@example.com", "password": "secret123"}
-        client.post("/users", json=payload)
-        resp = client.post("/users", json={**payload, "email": "irene2@example.com"})
+        client.post("/users/register", json=payload)
+        resp = client.post("/users/register", json={**payload, "email": "irene2@example.com"})
         assert resp.status_code == 400
 
     def test_duplicate_email_returns_400(self, client):
         payload = {"username": "jack", "email": "jack@example.com", "password": "secret123"}
-        client.post("/users", json=payload)
-        resp = client.post("/users", json={**payload, "username": "jack2"})
+        client.post("/users/register", json=payload)
+        resp = client.post("/users/register", json={**payload, "username": "jack2"})
         assert resp.status_code == 400
 
     def test_invalid_email_returns_422(self, client):
-        resp = client.post("/users", json={
+        resp = client.post("/users/register", json={
             "username": "kate",
             "email": "not-valid-email",
             "password": "secret123",
@@ -175,7 +175,7 @@ class TestUserAPI:
         assert resp.status_code == 422
 
     def test_get_user_by_id(self, client):
-        create_resp = client.post("/users", json={
+        create_resp = client.post("/users/register", json={
             "username": "liam",
             "email": "liam@example.com",
             "password": "secret123",
@@ -190,7 +190,7 @@ class TestUserAPI:
         assert resp.status_code == 404
 
     def test_get_user_does_not_return_password(self, client):
-        create_resp = client.post("/users", json={
+        create_resp = client.post("/users/register", json={
             "username": "mia",
             "email": "mia@example.com",
             "password": "secret123",
@@ -199,3 +199,40 @@ class TestUserAPI:
         resp = client.get(f"/users/{user_id}")
         assert "password" not in resp.json()
         assert "password_hash" not in resp.json()
+
+    def test_login_success(self, client):
+        # Register first
+        client.post("/users/register", json={
+            "username": "oscar",
+            "email": "oscar@example.com",
+            "password": "password123"
+        })
+        # Login
+        resp = client.post("/users/login", json={
+            "username": "oscar",
+            "password": "password123"
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["message"] == "Login successful"
+        assert data["username"] == "oscar"
+
+    def test_login_invalid_password(self, client):
+        client.post("/users/register", json={
+            "username": "papa",
+            "email": "papa@example.com",
+            "password": "password123"
+        })
+        resp = client.post("/users/login", json={
+            "username": "papa",
+            "password": "wrongpassword"
+        })
+        assert resp.status_code == 401
+        assert "Invalid" in resp.json()["detail"]
+
+    def test_login_nonexistent_user(self, client):
+        resp = client.post("/users/login", json={
+            "username": "nobody",
+            "password": "password123"
+        })
+        assert resp.status_code == 401
