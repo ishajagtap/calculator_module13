@@ -14,13 +14,13 @@ Implementing `bcrypt` for password hashing and verification highlighted the impo
 ### 3. Factory Pattern Integration
 Integrating the `OperationFactory` into the `POST /calculations` and `PUT /calculations` routes proved to be a clean way to keep the arithmetic logic decoupled from the API logic. This ensures that if new operations are added to the calculator later, the API routes don't necessarily need to be updated.
 
+### 4. JWT Authentication and Front-End Integration
+Transitioning from simple credential verification to JWT-based authentication was a significant step. By returning a secure token and storing it in the browser's `localStorage`, we created a stateful-like experience in a stateless REST API. Implementing the front-end pages with glassmorphism design also enhanced the user experience significantly.
+
 ## Challenges Faced
 
-### 1. Database Session Management in Tests
-A recurring challenge was ensuring that integration tests run in isolation. Using a `Transactional session` with rollbacks after each test was crucial for maintaining a clean state in the Postgres database, especially when testing unique constraints on usernames and emails.
-
-### 2. CI/CD Configuration
-Configuring the GitHub Actions workflow to spin up a Postgres service container and wait for it to be healthy before running integration tests required precise `health-check` parameters. This ensured that the automated pipeline is robust and reliable.
+### 3. Playwright E2E Testing with Docker
+Setting up Playwright to run inside a Docker container locally was a challenge. It required installing specific system dependencies and browser binaries within the `Dockerfile`. However, once configured, it provided a very reliable way to test the full authentication flow from a user's perspective without environment-specific issues.
 
 ## Conclusion
-The completion of these features provides a solid foundational back-end for the calculator. With a functional CI/CD pipeline pushing to Docker Hub, the application is now ready for deployment and subsequent front-end integration.
+The addition of JWT authentication and interactive front-end pages completes the core project requirements. The application now features a secure, modern stack with automated end-to-end testing and a robust CI/CD pipeline.

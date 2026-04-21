@@ -64,7 +64,7 @@ jobs:
 
       - name: Run end-to-end tests
         run: |
-          python -m pytest tests/test_e2e_playwright.py -v --browser chromium
+          python -m pytest tests/test_e2e_playwright.py tests/test_e2e_auth.py -v --browser chromium
 
   # ── Docker Hub push (only on push to main/master, after tests pass) ────────
   docker:

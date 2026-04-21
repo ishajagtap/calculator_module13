@@ -209,13 +209,13 @@ class TestUserAPI:
         })
         # Login
         resp = client.post("/users/login", json={
-            "username": "oscar",
+            "email": "oscar@example.com",
             "password": "password123"
         })
         assert resp.status_code == 200
         data = resp.json()
-        assert data["message"] == "Login successful"
-        assert data["username"] == "oscar"
+        assert "access_token" in data
+        assert data["token_type"] == "bearer"
 
     def test_login_invalid_password(self, client):
         client.post("/users/register", json={
@@ -224,7 +224,7 @@ class TestUserAPI:
             "password": "password123"
         })
         resp = client.post("/users/login", json={
-            "username": "papa",
+            "email": "papa@example.com",
             "password": "wrongpassword"
         })
         assert resp.status_code == 401
@@ -232,7 +232,7 @@ class TestUserAPI:
 
     def test_login_nonexistent_user(self, client):
         resp = client.post("/users/login", json={
-            "username": "nobody",
+            "email": "nobody@example.com",
             "password": "password123"
         })
         assert resp.status_code == 401

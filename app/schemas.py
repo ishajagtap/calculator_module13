@@ -80,8 +80,14 @@ class CalculationRead(BaseModel):
 
 class UserLogin(BaseModel):
     """Schema for user login credentials."""
-    username: str
+    email: EmailStr
     password: str
+
+
+class Token(BaseModel):
+    """Schema for JWT response."""
+    access_token: str
+    token_type: str
 
 
 class CalculationUpdate(BaseModel):

@@ -8,9 +8,8 @@ A full-stack calculator application built with **FastAPI**, featuring a **secure
 
 - **Web UI** — browser-based calculator with live results and history table
 - **REST API** — JSON endpoints for all arithmetic operations
-- **Secure User Model** — SQLAlchemy ORM model with bcrypt-hashed passwords, unique constraints on `username` and `email`
-- **Calculation Model** — SQLAlchemy ORM model storing `a`, `b`, `type`, and `result` with optional `user_id` foreign key
-- **Pydantic Schemas** — `UserCreate`, `UserRead`, `CalculationCreate` (with divide-by-zero validation), `CalculationRead`
+- **Secure User Model** — SQLAlchemy ORM model with bcrypt-hashed passwords and **JWT-based authentication** (Register/Login).
+- **Pydantic Schemas** — `UserCreate`, `UserRead`, `UserLogin`, `Token`, `CalculationCreate` (with divide-by-zero validation), `CalculationRead`
 - **Factory Pattern** — `CalculationFactory` selects and executes the correct arithmetic operation (Add, Sub, Multiply, Divide)
 - **10 operations** — addition, subtraction, multiplication, division, power, root, modulus, integer division, percent, absolute difference
 - **Logging** — all requests and errors logged to `data/logs/fastapi_calculator.log`
@@ -248,7 +247,22 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fastapi_db \
 ### End-to-end tests (requires Playwright browser)
 
 ```bash
-pytest tests/test_e2e_playwright.py -v --browser chromium
+pytest tests/test_e2e_playwright.py tests/test_e2e_auth.py -v --browser chromium
+```
+
+### Running Tests using Docker (Recommended)
+
+To run all tests in a consistent environment without installing dependencies on your host machine:
+
+```bash
+# Build and start services
+docker compose up --build -d
+
+# Run all tests inside the web container
+docker compose exec web pytest tests/ -v
+
+# Stop services
+docker compose down
 ```
 
 ### All tests with coverage
@@ -338,9 +352,11 @@ docker run -p 8000:8000 \
 | `POST`   | `/calculations`  | Create new calculation (Add)           |
 | `PUT`    | `/calculations/{id}` | Update calculation (Edit)          |
 | `DELETE` | `/calculations/{id}` | Remove calculation (Delete)        |
-| `POST`   | `/users/register` | Register a new user                   |
-| `POST`   | `/users/login`    | Login user                            |
-| `GET`    | `/users/{id}`     | Retrieve a user by ID                 |
+| `GET`    | `/register`    | Registration page (HTML)                |
+| `GET`    | `/login`       | Login page (HTML)                       |
+| `POST`   | `/register`    | Register a new user                     |
+| `POST`   | `/login`       | Login user and receive JWT              |
+| `GET`    | `/users/{id}`  | Retrieve a user by ID                   |
 
 ---
 

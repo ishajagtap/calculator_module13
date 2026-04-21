@@ -21,8 +21,10 @@ pytest-playwright>=0.4.0
 sqlalchemy>=2.0.0
 psycopg2-binary>=2.9.0
 
-# Password hashing
+# Password hashing and security
 bcrypt>=4.0.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
 
 # Email validation (used by Pydantic EmailStr)
 email-validator>=2.0.0

@@ -16,11 +16,12 @@ from app.schemas import (
     UserCreate,
     UserRead,
     UserLogin,
+    Token,
     CalculationCreate,
     CalculationRead,
     CalculationUpdate,
 )
-from app.security import hash_password, verify_password
+from app.security import hash_password, verify_password, create_access_token
 
 # ── Logging Setup ──────────────────────────────────────────────────────────────
 log_dir = Path("data/logs")
@@ -55,6 +56,18 @@ async def index(request: Request):
     return templates.TemplateResponse(
         request, "index.html", {"history": calculation_history}
     )
+
+
+@app.get("/register", response_class=HTMLResponse)
+async def get_register(request: Request):
+    """Serve the registration page."""
+    return templates.TemplateResponse(request, "register.html")
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def get_login(request: Request):
+    """Serve the login page."""
+    return templates.TemplateResponse(request, "login.html")
 
 
 @app.post("/calculate")
@@ -106,6 +119,7 @@ async def health_check():
 
 # ── User Routes ────────────────────────────────────────────────────────────────
 
+@app.post("/register", response_model=UserRead, status_code=201)
 @app.post("/users/register", response_model=UserRead, status_code=201)
 def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     """Register a new user with a hashed password."""
@@ -125,16 +139,18 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     return db_user
 
 
-@app.post("/users/login")
+@app.post("/login", response_model=Token)
+@app.post("/users/login", response_model=Token)
 def login(user_in: UserLogin, db: Session = Depends(get_db)):
-    """Verify user credentials."""
-    user = db.query(User).filter(User.username == user_in.username).first()
+    """Verify user credentials and return a JWT access token."""
+    user = db.query(User).filter(User.email == user_in.email).first()
     if not user or not verify_password(user_in.password, user.password_hash):
-        logger.warning("Failed login attempt for user: %s", user_in.username)
-        raise HTTPException(status_code=401, detail="Invalid username or password")
+        logger.warning("Failed login attempt for email: %s", user_in.email)
+        raise HTTPException(status_code=401, detail="Invalid email or password")
     
-    logger.info("User logged in: %s", user.username)
-    return {"message": "Login successful", "user_id": user.id, "username": user.username}
+    access_token = create_access_token(data={"sub": user.email})
+    logger.info("User logged in: %s", user.email)
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @app.get("/users/{user_id}", response_model=UserRead)
