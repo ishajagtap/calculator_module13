@@ -290,7 +290,7 @@ Generate a token at: **Docker Hub → Account Settings → Security → New Acce
 
 ## Docker Hub
 
-Image: [`ishajagtap/fastapi-calculator`](https://hub.docker.com/r/ishajagtap/fastapi-calculator)
+Image: [`ishaj2000/fastapi-calculator`](https://hub.docker.com/r/ishaj2000/fastapi-calculator)
 
 ```bash
 docker pull ishajagtap/fastapi-calculator:latest
