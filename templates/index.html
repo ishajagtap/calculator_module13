@@ -65,10 +65,26 @@
     tr:nth-child(even) td { background: #f8f9ff; }
     .history-title { font-size: 1.1rem; font-weight: 700; color: #1a1a2e; margin-bottom: 14px; }
     #no-history { color: #888; font-size: 0.95rem; }
+    .topbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+    .logout-btn {
+      padding: 8px 18px;
+      background: #ef4444;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .logout-btn:hover { background: #dc2626; }
   </style>
 </head>
 <body>
 <div class="container">
+  <div class="topbar">
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
   <h1>FastAPI Calculator</h1>
 
   <!-- Calculator Card -->
@@ -123,6 +139,16 @@
 </div>
 
 <script>
+  // Guard: redirect to login if no token
+  if (!localStorage.getItem('token')) {
+    window.location.href = '/login';
+  }
+
+  function logout() {
+    localStorage.removeItem('token');
+    window.location.href = '/login';
+  }
+
   const form       = document.getElementById('calc-form');
   const resultBox  = document.getElementById('result-box');
   const resultSpan = document.getElementById('result');

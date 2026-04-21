@@ -3,7 +3,7 @@ import logging
 import os
 from pathlib import Path
 from fastapi import FastAPI, Request, Form, Depends, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -50,12 +50,9 @@ calculation_history: list[dict] = []
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    """Serve the calculator web UI."""
-    logger.info("Serving calculator home page")
-    return templates.TemplateResponse(
-        request, "index.html", {"history": calculation_history}
-    )
+async def index():
+    """Redirect root to login page."""
+    return RedirectResponse(url="/login")
 
 
 @app.get("/register", response_class=HTMLResponse)
@@ -68,6 +65,14 @@ async def get_register(request: Request):
 async def get_login(request: Request):
     """Serve the login page."""
     return templates.TemplateResponse(request, "login.html")
+
+
+@app.get("/calculator", response_class=HTMLResponse)
+async def get_calculator(request: Request):
+    """Serve the calculator page (auth enforced client-side via JWT)."""
+    return templates.TemplateResponse(
+        request, "index.html", {"history": calculation_history}
+    )
 
 
 @app.post("/calculate")

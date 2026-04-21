@@ -202,8 +202,8 @@
                     messageDiv.className = 'success-msg';
                     messageDiv.textContent = 'Login successful! Redirecting...';
                     
-                    // Redirect to home page
-                    setTimeout(() => window.location.href = '/', 1500);
+                    // Redirect to calculator
+                    setTimeout(() => window.location.href = '/calculator', 1500);
                 } else {
                     messageDiv.className = 'error-msg';
                     messageDiv.textContent = data.detail || 'Invalid email or password.';
